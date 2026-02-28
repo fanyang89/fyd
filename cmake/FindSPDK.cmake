@@ -1,5 +1,10 @@
 # FindSPDK.cmake
-# Locates SPDK libraries via pkg-config from the in-tree build.
+# Locates SPDK libraries via pkg-config.
+#
+# Resolution order for pkg-config path:
+#   1) SPDK_PKG_CONFIG_PATH (explicit user override)
+#   2) ${spdk_SOURCE_DIR}/build/lib/pkgconfig (when SPDK is fetched by CPM)
+#   3) Existing PKG_CONFIG_PATH from the environment
 #
 # Sets:
 #   SPDK_FOUND
@@ -11,10 +16,14 @@ find_package(PkgConfig REQUIRED)
 
 # Allow override via cmake -DSPDK_PKG_CONFIG_PATH=...
 if(NOT SPDK_PKG_CONFIG_PATH)
-    set(SPDK_PKG_CONFIG_PATH "${CMAKE_SOURCE_DIR}/third_party/spdk/build/lib/pkgconfig")
+    if(DEFINED spdk_SOURCE_DIR AND EXISTS "${spdk_SOURCE_DIR}/build/lib/pkgconfig")
+        set(SPDK_PKG_CONFIG_PATH "${spdk_SOURCE_DIR}/build/lib/pkgconfig")
+    endif()
 endif()
 
-set(ENV{PKG_CONFIG_PATH} "${SPDK_PKG_CONFIG_PATH}:$ENV{PKG_CONFIG_PATH}")
+if(SPDK_PKG_CONFIG_PATH)
+    set(ENV{PKG_CONFIG_PATH} "${SPDK_PKG_CONFIG_PATH}:$ENV{PKG_CONFIG_PATH}")
+endif()
 
 set(_spdk_modules
     spdk_iscsi
@@ -57,7 +66,7 @@ list(REMOVE_DUPLICATES SPDK_LIBRARY_DIRS)
 if(NOT SPDK_LINK_LIBRARIES)
     set(SPDK_FOUND FALSE)
     if(FindSPDK_FIND_REQUIRED)
-        message(FATAL_ERROR "SPDK not found. Build SPDK first: cd third_party/spdk && ./configure && make")
+        message(FATAL_ERROR "SPDK not found. Build SPDK in the CPM source cache first (e.g. <cache>/spdk/<version>/build/lib/pkgconfig), or set -DSPDK_PKG_CONFIG_PATH=<spdk-build>/lib/pkgconfig")
     endif()
 endif()
 
